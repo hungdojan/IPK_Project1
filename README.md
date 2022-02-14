@@ -1,85 +1,64 @@
-# ZADÁNÍ
+# První projekt z předmětu IPK 2021/2022
+## Dokumentace projektu
 
-Úkolem je vytvoření serveru v jazyce C/C++ komunikujícího prostřednictvím protokolu HTTP, který bude poskytovat různé informace o systému. Server bude naslouchat na zadaném portu a podle url bude vracet požadované informace. Server musí správně zpracovávat hlavičky HTTP a vytvářet správné HTTP odpovědi. Typ odpovědi bude text/plain. Komunikace se serverem by měla být možná jak pomocí webového prohlížeče, tak nástroji typu wget a curl. Server musí být spustitelný v prostředí Linux Ubuntu 20.04 LTS  (https://ubuntu.com/).
+Úkolem je naprogramovat jednoduchý server v jazyce C/C++, který za použití protokolu 
+HTTP komunikuje s klientem. Server naslouchá na zadaném portu a
+posílá zpátky různé informace o systému podle požadavků v URL.
 
-Server bude přeložitelný pomocí Makefile, který vytvoří spustitelný soubor hinfosvc.
-Tento server bude spustitelný s argumentem označující lokální port na kterém bude naslouchat požadavkům:
-
-```
-.\hinfosvc 12345
-```
-
-Server bude možné ukončit pomocí CTRL+C. Server bude umět zpracovat následující tři typy dotazů, které jsou na server zaslané příkazem GET:
-
-
-1. Získání doménového jména  
-Vrací síťové jméno počítače včetně domény, například:
-
-```
->> GET http://servername:12345/hostname  
-merlin.fit.vutbr.cz
-```
-
-
-2. Získání informací o CPU   
-Vrací informaci o procesoru, například:
-
-```
->> GET http://servername:12345/cpu-name
-Intel(R) Xeon(R) CPU E5-2640 0 @ 2.50GHz
-```
-
-3. Aktuální zátěž   
-Vrací aktuální informace o zátěži. Tento vyžaduje výpočet z hodnot uvedených v souboru /proc/stat (viz odkaz níže). Výsledek je například:
-
-```
->> GET http://servername:12345/load
-65%
-```
-
-Potřebné informace pro odpověď lze v systému získat pomocí některých příkazů systému (uname, lscpu) a/nebo ze souborů v adresáři /proc. 
-
-# IMPLEMENTACE
-
-Implementace serveru bude v jazyce C/C++. Pro implementaci serveru je nutné využít knihovnu soketů. Není přípustné využívat knihovny pro zpracování HTTP a podobně - cílem je lightweight server, který má minimum závislostí.
-
-Součástí projektu bude dokumentace, kterou bude představovat soubor Readme.md, jenž bude obsahovat:
-
-- stručný popis projektu
-- způsob spuštění projektu
-- příklady použití projektu
-
-
-# HODNOCENÍ
-
-Hodnotí se funkčnost implementace (3/4 hodnocení) a její kvalita (1/4 hodnocení):
-
-- struktura projektu
-- srozumitelnost a jednoduchost kódu
-- dokumentace
-- množství závislostí na dalších knihovnách (rozumný balanc mezi tím co si napsat sám a co použít z knihoven)
-
-
-
-# TESTOVÁNÍ
-
-Vyzkoušejte si, zda Vám fungují alespoň základní varianty, tedy:
-
+### Překlad programu pomoci Makefile
+Uživatel může použít přiložený `Makefile` pro překlad programu.
 ```bash
-.\hinfosvc 12345 &
-curl http://localhost:12345/hostname
-curl http://localhost:12345/cpu-name
-curl http://localhost:12345/load
+# prikaz pro preklad programu
+make
+# prikaz pro predkal program a spusteni na portu 12345 (mozno zmeni v Makefile)
+make run
 ```
 
+Je možno zapnout logování zpráv pomocí dopsání `-DDEBUG` do Makefile.
+```
+...
+CFLAGS=-std=c99 -Wall -Wextra -g -pedantic -DDEBUG
+...
+```
 
-# DOPORUČENÍ
+### Překlad programu ručně
+Pro ruční překlad (do spustitelného program `hinfosvc`) je možno použít tyto příkazy:
+```bash
+# vlozeni -DDEBUG nakonec pro logovani
+gcc -o hinfosvc main.c responses.c
+```
 
-Zadání nepostihuje ani nemůže postihovat veškeré možnosti, které Vás napadnou při řešení nabo mohou nastat. V takovém případě je nutné navrhnou přijatelné a logické řešení. V případě, že si řešením nejste jisti se optejte prostřednictvím fóra.
+### Spuštění programu
+Program `hinfosvc` přijímá parametr `[port]`. Jde o kladnou celočíselnou
+hodnotu v rozmezi 0-65535 značící port pro naslouchání (doporučeno použít hodnoty vetší než 1023).  
+Přiklad spuštění programu:
+```bash
+# server nasloucha na portu 12345
+./hinfosvc 12345
+```
 
+### Požadavky a příklady
+Server reaguje na 3 požadavky:
+- hostname - vrací jmého hostujicího serveru
+- cpu-name - vrací jmého procesoru na daném serveru
+- load - vrací aktuální zátěž serveru  
+Na ostatní požadavky vrací chybu 404.
+ 
+Lokální server  
+Terminál 1
+```
+./hinfosvc 8080
+```
 
-# ODKAZY
+Terminál 2
+```bash
+curl http://localhost:8080/hostname
+thinkpad-e14
+curl http://localhost:8080/cpu-name
+AMD Ryzen 7 4700U with Radeon Graphics
+curl http://localhost:8080/load
+10.125%
+```
 
-- [Protokol HTTP RFC7231](https://tools.ietf.org/html/rfc7231)
-- [HTTP pro vývojáře](https://developer.mozilla.org/en-US/docs/Web/HTTP)
-- [Výpočet CPU Load](https://stackoverflow.com/questions/23367857/accurate-calculation-of-cpu-usage-given-in-percentage-in-linux)
+Webový prohlížeč  
+`http://localhost:8080/hostname`
