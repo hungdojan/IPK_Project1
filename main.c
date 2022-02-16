@@ -46,6 +46,10 @@ int message_handling(int client_socket_fd) {
     const unsigned msg_len = 2048;
     char recv_msg[msg_len], request[msg_len];
 
+    // bezpecna inicializace pole
+    memset(recv_msg, 0, msg_len);
+    memset(request, 0, msg_len);
+
     // cteni zpravy od uzivatele
     read(client_socket_fd, recv_msg, msg_len);
 #ifdef DEBUG
