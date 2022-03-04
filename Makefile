@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-std=c99 -Wall -Wextra -g -pedantic
-# CFLAGS+=-DDEBUG
+CFLAGS+=-DDEBUG
 TARGET=hinfosvc
 OBJS= main.o responses.o
 
@@ -19,5 +19,5 @@ clean:
 
 pack:
 	rm -f xdohun00.zip
-	zip xdohun00 Makefile *.c *.h
+	zip xdohun00 Makefile *.c *.h README.md
 

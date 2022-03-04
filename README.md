@@ -1,4 +1,6 @@
 # První projekt z předmětu IPK 2021/2022
+
+Autor: Hung Do (xdohun00)
 ## Dokumentace projektu
 
 Úkolem je naprogramovat jednoduchý server v jazyce C/C++, který za použití protokolu 
@@ -42,7 +44,7 @@ Server reaguje na 3 požadavky:
 - hostname - vrací jmého hostujicího serveru
 - cpu-name - vrací jmého procesoru na daném serveru
 - load - vrací aktuální zátěž serveru  
-Na ostatní požadavky vrací chybu 404.
+Na ostatní požadavky vrací chybu 400 (Bad Request).
  
 Lokální server  
 Terminál 1
