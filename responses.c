@@ -4,36 +4,28 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/socket.h>
-#include <time.h>
 #include <string.h>
 
 #define MSG_LEN 1024
 #define NOF_CPU_VALS 10
 #define RESPONSE_HEADER_FORMAT \
-"HTTP/1.1 %d %s\n"      /* code, state*/    \
-"Date: %s\n"            /* date */          \
-"Server: Apache\n"                          \
-"Last-Modified: %s\n"   /* date */          \
-"Content-Length: %d\n"  /* nof bytes */     \
-"Content-Type: text/plain\n"                \
-"\n"                                        \
-"%s"                    /* response */
+"HTTP/1.1 %d %s\r\n"      /* code, state*/ \
+"Connection: close\r\n"                    \
+"Content-Length: %d\r\n"  /* nof bytes */  \
+"Content-Type: text/plain\r\n"             \
+"\r\n"                                     \
+"%s"                      /* response */
 
 static int send_response(int client_socket_fd, char *response, int code, char *state) {
-    time_t t = time(NULL);
-    struct tm time_info = *localtime(&t);
     char reply[MSG_LEN] = { 0, };
-    char time_buffer[80] = { 0, };
     int response_len = strlen(response);
 
-    // nastaveni formatu data
-    strftime(time_buffer, 80, "%a, %d %b %Y %H:%M:%S %Z", &time_info);
-
+    // build string message
     snprintf(reply, MSG_LEN, 
             RESPONSE_HEADER_FORMAT,
-            code, state, time_buffer, time_buffer,
-            response_len, response);
+            code, state, response_len, response);
 
+    // send response
     write(client_socket_fd, reply, MSG_LEN);
     return 0;
 }
@@ -45,17 +37,16 @@ int get_hostname(int client_socket_fd) {
 
     char response[MSG_LEN] = "";
 
-    // precteni jmena hosta
+    // get hostname from the file
     fgets(response, MSG_LEN, file);
 
-    // odeslani klientovi a zavreni souboru
+    // send response and close file
     send_response(client_socket_fd, response, 200, "OK");
     fclose(file);
     return 0;
 }
 
 int get_cpu_name(int client_socket_fd) {
-    // zjistuji pres popen, kde volam:
     FILE *file = NULL;
     char file_output[MSG_LEN] = "";
     char response[MSG_LEN]  = "";
@@ -63,15 +54,15 @@ int get_cpu_name(int client_socket_fd) {
     if ((file = fopen("/proc/cpuinfo", "rb")) == NULL)
         return 1;
 
-    // ekvivalent grep; cte soubor, dokud nenarazi na radek zacinajici:
-    // model name : ...
+    // equivalent of egrep "^model name: " command
+    // append end-of-line character
     while (fgets(file_output, MSG_LEN, file) != NULL) {
         if (sscanf(file_output, "model name : %[^\n]s", response) > 0)
             break;
     }
     strcat(response, "\n");
 
-    // odeslani klientovi a zavreni souboru
+    // send response and close file
     send_response(client_socket_fd, response, 200, "OK");
     fclose(file);
     return 0;
@@ -80,10 +71,10 @@ int get_cpu_name(int client_socket_fd) {
 static int get_cpu_data(unsigned *cpu_vals) {
     FILE *file = NULL;
 
-    // kontrola chyby pri otevirani souboru /proc/stat
     if ((file = fopen("/proc/stat", "r")) == NULL)
         return 1;
 
+    // extract data from file
     fscanf(file, "cpu %u %u %u %u %u %u %u %u %u %u",
            &cpu_vals[USER],
            &cpu_vals[NICE],
@@ -100,7 +91,7 @@ static int get_cpu_data(unsigned *cpu_vals) {
     return 0;
 }
 
-// spocita zatizeni procesoru
+// calculate cpu load
 static double calculate_load(unsigned *prev_cpu_vals, unsigned *cpu_vals) {
     // FIXME:
     double prev_idle = prev_cpu_vals[IDLE] + prev_cpu_vals[IOWAIT];
@@ -124,14 +115,17 @@ int get_load(int client_socket_fd) {
     unsigned prev_cpu_vals[CPU_VALS_SIZE] = { 0, };
     unsigned cpu_vals[CPU_VALS_SIZE] = { 0, };
 
+    // get 2 loads from the system (one second apart)
+    // and calculate current system's load
     if (get_cpu_data(prev_cpu_vals))    return 1;
-    sleep(1);   // cekani jedne sekundy
+    sleep(1);
     if (get_cpu_data(cpu_vals))         return 1;
 
+    // build string message
     snprintf(response, MSG_LEN, "%g%%\n", 
              calculate_load(prev_cpu_vals, cpu_vals));
 
-    // odeslani klientovi a zavreni souboru
+    // send response
     send_response(client_socket_fd, response, 200, "OK");
     return 0;
 }

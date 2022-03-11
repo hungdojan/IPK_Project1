@@ -1,7 +1,7 @@
 #ifndef _RESPONSES_H_
 #define _RESPONSES_H_
 
-/** Vycet typu CPU hodnost z /proc/stat */
+/** Enumeration CPU values from /proc/stat */
 enum cpu_value_types {
     USER,
     NICE,
@@ -17,34 +17,34 @@ enum cpu_value_types {
 };
 
 /**
- * @brief Posila klientovi jmeno hosta
+ * @brief Send system's hostname to client
  *
- * @param client_socket_fd Cislo klientova socketu
- * @return Nenulove cislo v pripade chyby
+ * @param client_socket_fd Client socket file descriptor
+ * @return Non-zero value when error occure
  */
 int get_hostname(int client_socket_fd);
 
 /**
- * @brief Posila klientovi jmeno procesoru hosta
+ * @brief Send system's CPU name to client
  *
- * @param client_socket_fd Cislo klientova socketu
- * @return Nenulove cislo v pripade chyby
+ * @param client_socket_fd Client socket file descriptor
+ * @return Non-zero value when error occure
  */
 int get_cpu_name(int client_socket_fd);
 
 /**
- * @brief Posila klientovi aktualni zatez systemu hosta
+ * @brief Send system's load to client
  *
- * @param client_socket_fd Cislo klientova socketu
- * @return Nenulove cislo v pripade chyby
+ * @param client_socket_fd Client socket file descriptor
+ * @return Non-zero value when error occure
  */
 int get_load(int client_socket_fd);
 
 /**
- * @brief Chybovy zprava pro klienta pri neznamem pozadavku
+ * @brief Handle bad request
  *
- * @param client_socket_fd  Cislo klientova socketu
- * @return Nenulove cislo v pripade chyby
+ * @param client_socket_fd Client socket file descriptor
+ * @return Non-zero value when error occure
  */
 int get_bad_request(int client_socket_fd);
 

@@ -20,45 +20,49 @@
     } while(0)
 
 /**
- * @brief Zpracovani argumentu programu
+ * @brief Arguments processing
  *
- * @param argv  Pocet argumentu
- * @param args  Pole argumentu
- * @param port  Vybrany port
- * @return Nenulova hodnota pri chybe
+ * @param argc  Arguments counter
+ * @param argv  Vector of arguments
+ * @param port  User defined port [out]
+ * @return Non-zero value when error occured
  */
 int argument_handler(int argc, char *argv[], uint16_t *port) {
-    // podminka pri nezadani zadneho argumentu
+    // check for port argument
     if (argc < 2)
-        ERROR_MSG(1, "Pozadovan port pro naslochani v argumentu\n" "Pouziti:\n./hinfosvc [port]\n");
-    // nacteni portu pro naslouchani
+        ERROR_MSG(1, "Server port is required (value 1024 - 65536)\n"
+                     "Usage: ./hinfosvc [port]\n");
+    // load port from arguments
     *port = strtol(argv[1], NULL, 10);
     return 0;
 }
 
 /**
- * @brief Rizena komunikace mezi serverem a klientem
+ * @brief Answer client's request
  *
- * @param client_socket_fd Cislo klientova prirazeneho socketu
+ * @param client_socket_fd Client's socket file descriptor
  */
 int message_handling(int client_socket_fd) {
     int retval = 0;
     const unsigned msg_len = 2048;
-    char recv_msg[msg_len], request[msg_len];
+    char recv_msg[msg_len], request[msg_len], host[msg_len];
 
-    // bezpecna inicializace pole
+    // memory safe array initialization
     memset(recv_msg, 0, msg_len);
     memset(request, 0, msg_len);
 
-    // cteni zpravy od uzivatele
+    // load client's request
     read(client_socket_fd, recv_msg, msg_len);
 #ifdef DEBUG
     printf("%s\n", recv_msg);
 #endif
-    // nacteni pozadavku
-    sscanf(recv_msg, "GET /%s HTTP", request);
 
-    if (!strcmp(request, "hostname")) {
+    // validate header and process response
+    int nof_loaded_strings = sscanf(recv_msg, "GET /%s HTTP/1.1\r\nHost: %s", request, host);
+
+    if (nof_loaded_strings < 2) {
+        retval = get_bad_request(client_socket_fd);
+    } else if (!strcmp(request, "hostname")) {
         retval = get_hostname(client_socket_fd);
     } else if (!strcmp(request, "cpu-name")) {
         retval = get_cpu_name(client_socket_fd);
@@ -76,37 +80,37 @@ int main(int argc, char *argv[]) {
     int server_socket_fd, client_socket_fd;
     struct sockaddr_in address, client;
 
-    // zpracovani argumentu
+    // get port from arguments
     if ( (retval = argument_handler(argc, argv, &port)) )
         return retval;
 #ifdef DEBUG
     printf("Port: %d\n", port);
 #endif 
 
-    // vytvoreni socketu
+    // initialize socket
     if ((server_socket_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-        ERROR_MSG(1, "Chyba pri tvorbe socketu\n");
+        ERROR_MSG(1, "Socket initialization error\n");
 #ifdef DEBUG
-    puts("Socket uspesne vytvoren\n");
+    puts("Socket initialization success\n");
 #endif
 
     INIT_SOCKADDR(address, port);
 
-    // pripojeni serveru na port
+    // bind socket to port
     if (bind(server_socket_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
-        ERROR_MSG(1, "Chyba pri pripojovani serveru na port\n");
-# if DEBUG
-    printf("Server uspesne pripojen na port %d\n", port);
-#endif
-
-    // naslouchani portu
-    if (listen(server_socket_fd, 3) < 0)
-        ERROR_MSG(1, "Chyba naslouchani portu\n");
+        ERROR_MSG(1, "Socket binding error\n");
 #ifdef DEBUG
-    puts("Cekani na pripojeni...");
+    printf("Socket successfully bind to port %d\n", port);
 #endif
 
-    // cekani na pripojeni clienta
+    // list to port, queue size = 3
+    if (listen(server_socket_fd, 3) < 0)
+        ERROR_MSG(1, "Socket listening error\n");
+#ifdef DEBUG
+    puts("Waiting for connection...");
+#endif
+
+    // waiting for client's connection
     unsigned addrlen = sizeof(struct sockaddr_in);
 
     while ((client_socket_fd = accept(server_socket_fd,
@@ -116,13 +120,13 @@ int main(int argc, char *argv[]) {
         puts("Connection accepted");
 #endif
 
-        // komunikace serveru s klientem
+        // communication handling
         retval = message_handling(client_socket_fd);
     }
     if (client_socket_fd < 0)
-        ERROR_MSG(1, "Chyba pripojeni klienta\n");
+        ERROR_MSG(1, "Client's communication error\n");
 
-    // uzavreni socketu
+    // close socket
     close(server_socket_fd);
     return retval;
 }
